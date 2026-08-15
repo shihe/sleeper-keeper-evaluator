@@ -14,7 +14,7 @@ interface TeamCardProps {
 }
 
 export const TeamCard: React.FC<TeamCardProps> = ({ team, keeperCost, undraftedPenalty, adpType, sortBy, playerPercentiles }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => window.innerWidth < 768);
   const defaultAvatar = `https://sleepercdn.com/avatars/default_avatar.png`;
 
   const draftPicksByYear = team.draft_picks.reduce((acc, pick) => {
@@ -24,6 +24,31 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, keeperCost, undraftedP
     acc[pick.year].push(pick);
     return acc;
   }, {} as Record<string, DraftPick[]>);
+
+  const previewKeepers = useMemo(() => {
+    return [...team.roster].sort((a, b) => {
+      const deltaA = calculatePlayerValueDelta(a, team.totalTeams, team.totalDraftRounds, keeperCost, undraftedPenalty, adpType);
+      const deltaB = calculatePlayerValueDelta(b, team.totalTeams, team.totalDraftRounds, keeperCost, undraftedPenalty, adpType);
+      
+      if (deltaA !== deltaB) {
+        return deltaB - deltaA; // highest value first
+      }
+      
+      const adpA = a.adps ? a.adps[adpType as keyof typeof a.adps] : a.adp;
+      const adpB = b.adps ? b.adps[adpType as keyof typeof b.adps] : b.adp;
+      return (adpA || 9999) - (adpB || 9999);
+    }).slice(0, 4);
+  }, [team.roster, team.totalTeams, team.totalDraftRounds, keeperCost, undraftedPenalty, adpType]);
+
+  const top3AverageValue = useMemo(() => {
+    if (previewKeepers.length === 0) return 0;
+    const top3 = previewKeepers.slice(0, 3);
+    const sum = top3.reduce((total, player) => {
+       const percentile = playerPercentiles[player.id];
+       return total + (percentile !== undefined ? percentile : 0);
+    }, 0);
+    return sum / top3.length;
+  }, [previewKeepers, playerPercentiles]);
 
   const sortedRoster = useMemo(() => {
     if (sortBy === 'position') {
@@ -63,15 +88,59 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, keeperCost, undraftedP
               <p className="text-sm text-slate-400">@{team.owner?.username || 'N/A'}</p>
             </div>
           </div>
-          <button 
-            className="text-slate-400 group-hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-700/50 flex-shrink-0" 
-            aria-label="Toggle Team Card"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}>
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center mr-2 bg-slate-700/50 rounded-lg px-3 py-1.5 shadow-inner">
+              <span className={`text-lg font-bold ${top3AverageValue >= 80 ? 'text-green-400' : top3AverageValue >= 50 ? 'text-teal-400' : top3AverageValue >= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {top3AverageValue.toFixed(1)}
+              </span>
+            </div>
+            <button 
+              className="text-slate-400 group-hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-700/50 flex-shrink-0" 
+              aria-label="Toggle Team Card"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}>
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {isCollapsed && previewKeepers.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-700/50 relative">
+             <div className="flex items-center justify-between mb-2 px-1">
+                 <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Top Keepers Preview</h5>
+             </div>
+             <div className="space-y-1 relative">
+                 {previewKeepers.map(player => (
+                    <PlayerItem key={player.id} player={player} totalTeams={team.totalTeams} totalDraftRounds={team.totalDraftRounds} keeperCost={keeperCost} undraftedPenalty={undraftedPenalty} adpType={adpType} percentile={playerPercentiles[player.id]} />
+                 ))}
+                 {team.roster.length > 4 && (
+                   <div 
+                     className="absolute -bottom-2 left-0 w-full h-24 pointer-events-none z-10 flex items-end justify-center pb-2"
+                     style={{ 
+                       backdropFilter: 'blur(8px)',
+                       WebkitBackdropFilter: 'blur(8px)',
+                       WebkitMaskImage: 'linear-gradient(to bottom, transparent 10%, black 80%)',
+                       maskImage: 'linear-gradient(to bottom, transparent 10%, black 80%)'
+                     }}
+                   >
+                     <button 
+                        className="flex items-center gap-2 text-sm font-medium text-teal-400 hover:text-teal-300 transition-colors pointer-events-auto px-4 py-2 rounded-full bg-slate-800/80 shadow-sm border border-slate-700/50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCollapsed(false);
+                        }}
+                      >
+                       <span>Expand Roster</span>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                         <polyline points="6 9 12 15 18 9"></polyline>
+                       </svg>
+                     </button>
+                   </div>
+                 )}
+             </div>
+          </div>
+        )}
 
         {!isCollapsed && (
           <div className="space-y-5 mt-6">
