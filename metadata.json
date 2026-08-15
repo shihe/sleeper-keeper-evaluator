@@ -1,0 +1,6 @@
+{
+  "name": "Sleeper Keeper Evaluator",
+  "description": "Discover the best keeper values and draft steals based on current ADP, draft capital, and custom round penalties.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
