@@ -70,8 +70,8 @@ export const LeagueInput: React.FC<LeagueInputProps> = ({
               disabled={isLoading}
               className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 focus:outline-none transition duration-200 text-sm"
             >
-              <option value="position">Position</option>
               <option value="value">Value</option>
+              <option value="position">Position</option>
             </select>
           </div>
           <div className="flex items-center gap-2">

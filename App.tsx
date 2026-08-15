@@ -34,7 +34,7 @@ export default function App(): React.ReactNode {
   const [keeperCost, setKeeperCost] = useState<number>(initialSettings.keeperCost ?? 0);
   const [undraftedPenalty, setUndraftedPenalty] = useState<number>(initialSettings.undraftedPenalty ?? 0);
   const [adpType, setAdpType] = useState<string>(initialSettings.adpType ?? 'half_ppr');
-  const [sortBy, setSortBy] = useState<'position' | 'value'>(initialSettings.sortBy ?? 'position');
+  const [sortBy, setSortBy] = useState<'position' | 'value'>(initialSettings.sortBy ?? 'value');
 
   // Save settings when they change
   useEffect(() => {
