@@ -2,13 +2,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { Player, DraftPick } from '../types';
 
-// Ensure the API key is available in the environment variables
-const apiKey = process.env.API_KEY;
-if (!apiKey) {
-    throw new Error("API_KEY environment variable not set");
-}
+let ai: GoogleGenAI | null = null;
+const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
 
-const ai = new GoogleGenAI({ apiKey });
+if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
+}
 
 const generatePrompt = (roster: Player[], picks: DraftPick[]): string => {
     const rosterSummary = roster.map(p => `${p.name} (${p.position})`).join(', ');
@@ -43,6 +42,10 @@ const generatePrompt = (roster: Player[], picks: DraftPick[]): string => {
 };
 
 export async function analyzeTeam(roster: Player[], picks: DraftPick[]): Promise<string> {
+    if (!ai) {
+        return "AI analysis is currently unavailable because the API key is not configured.";
+    }
+
     const prompt = generatePrompt(roster, picks);
 
     try {
